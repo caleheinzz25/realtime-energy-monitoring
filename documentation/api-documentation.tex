@@ -1,0 +1,484 @@
+\documentclass[12pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{tabularx}
+
+% Page geometry
+\geometry{margin=2.5cm}
+
+% Colors
+\definecolor{primaryblue}{RGB}{17, 138, 178}
+\definecolor{darkgray}{RGB}{51, 51, 51}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{codegreen}{RGB}{0, 128, 0}
+\definecolor{codepurple}{RGB}{128, 0, 128}
+\definecolor{backcolour}{RGB}{250, 250, 250}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    filecolor=primaryblue,
+    urlcolor=primaryblue,
+}
+
+% Listings setup for JSON
+\lstdefinelanguage{json}{
+    basicstyle=\ttfamily\small,
+    numbers=none,
+    showstringspaces=false,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{backcolour},
+    literate=
+        *{:}{{{\color{codepurple}{:}}}}{1}
+        {,}{{{\color{codepurple}{,}}}}{1}
+        {\{}{{{\color{codepurple}{\{}}}}{1}
+        {\}}{{{\color{codepurple}{\}}}}}{1}
+        {[}{{{\color{codepurple}{[}}}}{1}
+        {]}{{{\color{codepurple}{]}}}}{1},
+}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textbf{Energy Monitoring System}}
+\fancyhead[R]{REST API Documentation}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Title formatting
+\titleformat{\section}{\Large\bfseries\color{primaryblue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{darkgray}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{darkgray}}{\thesubsubsection}{1em}{}
+
+% HTTP Method colors
+\newcommand{\httpget}{\colorbox{green!30}{\textbf{GET}}}
+\newcommand{\httppost}{\colorbox{blue!30}{\textbf{POST}}}
+\newcommand{\httpput}{\colorbox{yellow!30}{\textbf{PUT}}}
+\newcommand{\httpdelete}{\colorbox{red!30}{\textbf{DELETE}}}
+
+% Document info
+\title{
+    \vspace{-2cm}
+    \textbf{\Huge REST API Documentation}\\[0.5cm]
+    \Large Energy Monitoring Dashboard System\\[0.3cm]
+    \large Technical Documentation
+}
+\author{Solutions Architect Team\\Ravelware}
+\date{Version 1.0 -- January 16, 2026}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\vspace{1cm}
+
+\begin{abstract}
+This document provides comprehensive documentation for the REST API endpoints of the Energy Monitoring Dashboard System. All endpoints are prefixed with \texttt{/api/v1} and return JSON responses. The API supports real-time panel monitoring, historical data retrieval, and MQTT client management.
+\end{abstract}
+
+\vspace{1cm}
+
+\tableofcontents
+\newpage
+
+% ============================================
+\section{Document Information}
+% ============================================
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Document Title & REST API Documentation \\
+Version & 1.0 \\
+Date & January 16, 2026 \\
+Author & Solutions Architect Team \\
+Base URL & \texttt{http://localhost:3000/api/v1} \\
+Content-Type & application/json \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================
+\section{API Overview}
+% ============================================
+
+% taruh diagram di sini
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\textwidth]{plantuml/api-endpoints-diagram.png}
+\caption{API Endpoints Sequence Diagram}
+\label{fig:api-sequence}
+\end{figure}
+
+\subsection{Base URL}
+\begin{verbatim}
+http://localhost:3000/api/v1
+\end{verbatim}
+
+\subsection{Authentication}
+Currently, the API does not require authentication. Future versions may implement JWT-based authentication.
+
+\subsection{Response Format}
+All API responses follow this standard format:
+
+\begin{lstlisting}[language=json]
+{
+  "status": "OK" | "ERROR",
+  "message": "Optional message",
+  "data": { ... }
+}
+\end{lstlisting}
+
+\subsection{HTTP Status Codes}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Code} & \textbf{Status} & \textbf{Description} \\
+\midrule
+200 & OK & Request successful \\
+400 & Bad Request & Invalid parameters \\
+404 & Not Found & Resource not found \\
+500 & Internal Server Error & Server error \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================
+\section{Endpoints}
+% ============================================
+
+% --------------------------------------------
+\subsection{\httpget{} /panels/realtime}
+% --------------------------------------------
+
+\textbf{Description:} Get real-time data for all panels including current readings and status.
+
+\subsubsection{Request}
+\begin{verbatim}
+GET /api/v1/panels/realtime
+\end{verbatim}
+
+\subsubsection{Parameters}
+None
+
+\subsubsection{Response}
+\begin{lstlisting}[language=json]
+{
+  "status": "OK",
+  "data": {
+    "panels": [
+      {
+        "pmCode": "PANEL_LANTAI_1",
+        "location": "Lantai 1 - Main",
+        "floor": 1,
+        "panelStatus": "ONLINE",
+        "lastUpdateRelative": "2s ago",
+        "v": [224.7, 224.7, 223.5, 149.8],
+        "i": [0.8, 0.99, 0.58, 0.03],
+        "kw": "0.36",
+        "kVA": "0.46",
+        "kWh": "150.07",
+        "pf": 0.86,
+        "vunbal": 0.01,
+        "iunbal": 0.047,
+        "time": "2026-01-16 11:30:05"
+      }
+    ],
+    "timestamp": "2026-01-16 11:30:10"
+  }
+}
+\end{lstlisting}
+
+\subsubsection{Response Fields}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\midrule
+pmCode & string & Panel code identifier \\
+location & string & Physical location \\
+floor & integer & Floor number \\
+panelStatus & string & ONLINE or OFFLINE \\
+lastUpdateRelative & string & Relative time since last update \\
+v & array[4] & Voltage [R, S, T, N] in Volts \\
+i & array[4] & Current [R, S, T, N] in Amperes \\
+kw & string & Active power in kW \\
+kVA & string & Apparent power in kVA \\
+kWh & string & Cumulative energy in kWh \\
+pf & number & Power factor (0-1) \\
+vunbal & number & Voltage unbalance ratio \\
+iunbal & number & Current unbalance ratio \\
+time & string & Timestamp (YYYY-MM-DD HH:mm:ss) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% --------------------------------------------
+\subsection{\httpget{} /panels/usage/today/:panelCode}
+% --------------------------------------------
+
+\textbf{Description:} Get today's energy usage and cost for a specific panel.
+
+\subsubsection{Request}
+\begin{verbatim}
+GET /api/v1/panels/usage/today/PANEL_LANTAI_1
+\end{verbatim}
+
+\subsubsection{Path Parameters}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Type} & \textbf{Required} & \textbf{Description} \\
+\midrule
+panelCode & string & Yes & Panel identifier (e.g., PANEL\_LANTAI\_1) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Response}
+\begin{lstlisting}[language=json]
+{
+  "status": "OK",
+  "data": {
+    "panelCode": "PANEL_LANTAI_1",
+    "date": "2026-01-16",
+    "todayUsageKWh": 18.97,
+    "todayCost": 28455,
+    "currency": "IDR",
+    "currentKWh": 150.07,
+    "midnightKWh": 131.1
+  }
+}
+\end{lstlisting}
+
+\subsubsection{Calculation Logic}
+\begin{verbatim}
+todayUsageKWh = currentKWh - midnightKWh
+todayCost = todayUsageKWh * COST_PER_KWH (Rp 1.500/kWh)
+\end{verbatim}
+
+% --------------------------------------------
+\subsection{\httpget{} /panels/history/:panelCode}
+% --------------------------------------------
+
+\textbf{Description:} Get historical energy data for chart visualization.
+
+\subsubsection{Request}
+\begin{verbatim}
+GET /api/v1/panels/history/PANEL_LANTAI_1?range=24h
+\end{verbatim}
+
+\subsubsection{Parameters}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lllll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Type} & \textbf{In} & \textbf{Required} & \textbf{Description} \\
+\midrule
+panelCode & string & path & Yes & Panel identifier \\
+range & string & query & No & Time range (default: 24h) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Valid Range Values}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Range} & \textbf{Aggregation} & \textbf{Description} \\
+\midrule
+1h & 1 hour & Last 1 hour \\
+6h & 1 hour & Last 6 hours \\
+12h & 1 hour & Last 12 hours \\
+24h & 1 hour & Last 24 hours \\
+7d & 6 hours & Last 7 days \\
+30d & 1 day & Last 30 days \\
+1y & 30 days & Last 1 year \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Response}
+\begin{lstlisting}[language=json]
+{
+  "status": "OK",
+  "message": "",
+  "data": {
+    "pmCode": "PANEL_LANTAI_1",
+    "year": "2026",
+    "month": "01",
+    "date": "16",
+    "range": "24h",
+    "energy": [131.179, 131.523, 131.87, 132.219, ...],
+    "cost": [196768, 197284, 197805, 198329, ...],
+    "dataPoints": 24
+  }
+}
+\end{lstlisting}
+
+% --------------------------------------------
+\subsection{\httpget{} /panels/usage/monthly/:year/:month}
+% --------------------------------------------
+
+\textbf{Description:} Get monthly energy usage summary for all panels.
+
+\subsubsection{Request}
+\begin{verbatim}
+GET /api/v1/panels/usage/monthly/2026/01
+\end{verbatim}
+
+\subsubsection{Path Parameters}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Type} & \textbf{Required} & \textbf{Description} \\
+\midrule
+year & string & Yes & Year (e.g., 2026) \\
+month & string & Yes & Month 01-12 (e.g., 01) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Response}
+\begin{lstlisting}[language=json]
+{
+  "status": "OK",
+  "data": {
+    "year": 2026,
+    "month": 1,
+    "panels": [
+      {
+        "panelCode": "PANEL_LANTAI_1",
+        "totalKWh": 450.5,
+        "totalCost": 675750
+      },
+      {
+        "panelCode": "PANEL_LANTAI_2",
+        "totalKWh": 380.2,
+        "totalCost": 570300
+      }
+    ],
+    "buildingTotal": {
+      "totalKWh": 1200.75,
+      "totalCost": 1801125
+    }
+  }
+}
+\end{lstlisting}
+
+% --------------------------------------------
+\subsection{\httppost{} /mqtt/start}
+% --------------------------------------------
+
+\textbf{Description:} Start the MQTT client listener to receive sensor data.
+
+\subsubsection{Request}
+\begin{verbatim}
+POST /api/mqtt/start
+\end{verbatim}
+
+\subsubsection{Request Body}
+None
+
+\subsubsection{Response}
+\begin{lstlisting}[language=json]
+{
+  "status": "OK",
+  "message": "MQTT client started",
+  "connected": true
+}
+\end{lstlisting}
+
+% --------------------------------------------
+\subsection{\httpget{} /mqtt/start}
+% --------------------------------------------
+
+\textbf{Description:} Check MQTT client connection status.
+
+\subsubsection{Request}
+\begin{verbatim}
+GET /api/mqtt/start
+\end{verbatim}
+
+\subsubsection{Response}
+\begin{lstlisting}[language=json]
+{
+  "status": "OK",
+  "connected": true,
+  "initialized": true
+}
+\end{lstlisting}
+
+% ============================================
+\section{Error Responses}
+% ============================================
+
+\subsection{400 Bad Request}
+\begin{lstlisting}[language=json]
+{
+  "status": "ERROR",
+  "message": "Invalid range. Valid values: 1h, 6h, 12h, 24h, 7d, 30d, 1y"
+}
+\end{lstlisting}
+
+\subsection{404 Not Found}
+\begin{lstlisting}[language=json]
+{
+  "status": "ERROR",
+  "message": "Panel not found"
+}
+\end{lstlisting}
+
+\subsection{500 Internal Server Error}
+\begin{lstlisting}[language=json]
+{
+  "status": "ERROR",
+  "message": "Failed to fetch data",
+  "error": "Database connection error"
+}
+\end{lstlisting}
+
+% ============================================
+\section{Glossary}
+% ============================================
+
+\begin{description}
+    \item[kWh] Kilowatt-hour -- Unit of energy consumption
+    \item[kW] Kilowatt -- Unit of power
+    \item[kVA] Kilovolt-ampere -- Unit of apparent power
+    \item[Power Factor] Ratio of real power to apparent power
+    \item[MQTT] Message Queuing Telemetry Transport protocol
+    \item[IDR] Indonesian Rupiah currency
+\end{description}
+
+\end{document}

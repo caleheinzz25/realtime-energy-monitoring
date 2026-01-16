@@ -1,0 +1,128 @@
+@startuml system-architecture
+
+!define RECTANGLE class
+
+skinparam backgroundColor #FEFEFE
+skinparam componentStyle uml2
+skinparam defaultFontSize 12
+skinparam arrow {
+    Color #333333
+    FontColor #333333
+}
+
+skinparam cloud {
+    BackgroundColor #E8F4FD
+    BorderColor #1976D2
+}
+
+skinparam database {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+}
+
+skinparam component {
+    BackgroundColor #E8F5E9
+    BorderColor #388E3C
+}
+
+skinparam node {
+    BackgroundColor #F3E5F5
+    BorderColor #7B1FA2
+}
+
+title Energy Monitoring System - Architecture Diagram\nVersion 1.0 | January 2026
+
+package "IoT Layer" #ECEFF1 {
+    [Power Meter\nLantai 1] as PM1
+    [Power Meter\nLantai 2] as PM2
+    [Power Meter\nLantai 3] as PM3
+    [Power Meter\nLantai N] as PMN
+    
+    note bottom of PMN
+        Scalable: New panels
+        auto-register via
+        wildcard subscription
+    end note
+}
+
+cloud "Message Broker" #E3F2FD {
+    component "MQTT Broker\n(Mosquitto)" as MQTT {
+        port "1883" as mqtt_port
+    }
+    
+    note right of MQTT
+        Topics:
+        DATA/PM/PANEL_LANTAI_1
+        DATA/PM/PANEL_LANTAI_2
+        DATA/PM/PANEL_LANTAI_3
+        DATA/PM/# (wildcard)
+    end note
+}
+
+package "Application Layer" #E8F5E9 {
+    node "Next.js Server" as NextJS {
+        component "MQTT Client\n(Subscriber)" as MQTTClient
+        component "API Routes\n(/api/v1/*)" as APIRoutes
+        component "Business Logic" as BizLogic
+        component "React Components" as ReactComp
+    }
+}
+
+package "Data Layer" #FFF3E0 {
+    database "InfluxDB" as InfluxDB {
+        [Bucket: energy\nMeasurement: energy_data]
+    }
+    
+    database "PostgreSQL" as PostgreSQL {
+        [panels\nenergy_summary_daily\nenergy_summary_monthly]
+    }
+}
+
+package "Presentation Layer" #F3E5F5 {
+    node "Web Browser" as Browser {
+        component "Dashboard UI" as Dashboard
+        component "Panel Cards" as PanelCards
+        component "Energy Charts\n(Recharts)" as Charts
+    }
+}
+
+' IoT to MQTT
+PM1 --> MQTT : "publish\nDATA/PM/PANEL_LANTAI_1"
+PM2 --> MQTT : "publish"
+PM3 --> MQTT : "publish"
+PMN --> MQTT : "publish"
+
+' MQTT to App
+MQTT --> MQTTClient : "subscribe\nDATA/PM/#"
+
+' Internal App Flow
+MQTTClient --> BizLogic : "parse payload"
+BizLogic --> InfluxDB : "write\ntime-series data"
+BizLogic --> PostgreSQL : "update\npanel status"
+
+' API Flow
+APIRoutes --> BizLogic : "query"
+BizLogic --> InfluxDB : "read\nhistorical data"
+BizLogic --> PostgreSQL : "read\nmetadata"
+
+' Frontend Flow
+Browser --> APIRoutes : "HTTP/REST\nGET /api/v1/*"
+APIRoutes --> Browser : "JSON response"
+
+Dashboard --> PanelCards
+Dashboard --> Charts
+
+' Styling
+ReactComp --> Dashboard : "render"
+
+legend right
+    |= Component |= Technology |
+    | MQTT Broker | Eclipse Mosquitto |
+    | Backend | Next.js 14 + TypeScript |
+    | Time-Series DB | InfluxDB 2.x |
+    | Relational DB | PostgreSQL 15 |
+    | Charts | Recharts |
+    | Styling | Tailwind CSS |
+endlegend
+
+@enduml

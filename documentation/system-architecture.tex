@@ -1,0 +1,408 @@
+\documentclass[12pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{enumitem}
+
+% Page geometry
+\geometry{margin=2.5cm}
+
+% Colors
+\definecolor{primaryblue}{RGB}{17, 138, 178}
+\definecolor{darkgray}{RGB}{51, 51, 51}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{backcolour}{RGB}{250, 250, 250}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    filecolor=primaryblue,
+    urlcolor=primaryblue,
+}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textbf{Energy Monitoring System}}
+\fancyhead[R]{System Architecture}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Title formatting
+\titleformat{\section}{\Large\bfseries\color{primaryblue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{darkgray}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{darkgray}}{\thesubsubsection}{1em}{}
+
+% Document info
+\title{
+    \vspace{-2cm}
+    \textbf{\Huge System Architecture}\\[0.5cm]
+    \Large Energy Monitoring Dashboard System\\[0.3cm]
+    \large Technical Documentation
+}
+\author{Solutions Architect Team\\Ravelware}
+\date{Version 1.0 -- January 16, 2026}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\vspace{1cm}
+
+\begin{abstract}
+This document describes the system architecture of the Energy Monitoring Dashboard for Ravelware office. The system provides real-time monitoring of electrical panels across multiple floors, with data collection via MQTT protocol, storage in InfluxDB (time-series) and PostgreSQL (relational), and visualization through a Next.js web dashboard.
+\end{abstract}
+
+\vspace{1cm}
+
+\tableofcontents
+\newpage
+
+% ============================================
+\section{Document Information}
+% ============================================
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Document Title & System Architecture \\
+Version & 1.0 \\
+Date & January 16, 2026 \\
+Author & Solutions Architect Team \\
+Project & Energy Monitoring Dashboard \\
+Status & Final \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================
+\section{Executive Summary}
+% ============================================
+
+The Energy Monitoring System is designed to:
+
+\begin{itemize}
+    \item Monitor electrical consumption across \textbf{3 floors} of office building
+    \item Provide \textbf{real-time} visibility into power usage
+    \item Calculate \textbf{daily and monthly costs} in Indonesian Rupiah (IDR)
+    \item Support \textbf{scalable} addition of new panels automatically
+    \item Store \textbf{historical data} for trend analysis
+\end{itemize}
+
+% ============================================
+\section{Architecture Overview}
+% ============================================
+
+% taruh diagram di sini
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\textwidth]{plantuml/system-architecture.png}
+\caption{System Architecture Diagram}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Architecture Layers}
+
+The system follows a \textbf{layered architecture} pattern:
+
+\begin{enumerate}
+    \item \textbf{IoT Layer} -- Power meters sending data via MQTT
+    \item \textbf{Message Broker Layer} -- Eclipse Mosquitto for MQTT pub/sub
+    \item \textbf{Application Layer} -- Next.js server with business logic
+    \item \textbf{Data Layer} -- InfluxDB and PostgreSQL databases
+    \item \textbf{Presentation Layer} -- React-based web dashboard
+\end{enumerate}
+
+% ============================================
+\section{Technology Stack}
+% ============================================
+
+\begin{table}[h]
+\centering
+\caption{Technology Stack}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Component} & \textbf{Technology} & \textbf{Version} \\
+\midrule
+Frontend Framework & Next.js (App Router) & 14.x \\
+Backend Runtime & Node.js & 18.x+ \\
+Language & TypeScript & 5.x \\
+Charts Library & Recharts & 2.x \\
+CSS Framework & Tailwind CSS & 3.x \\
+\midrule
+Time-Series Database & InfluxDB & 2.x \\
+Relational Database & PostgreSQL & 15.x \\
+ORM & Prisma & 5.x \\
+\midrule
+Message Broker & Eclipse Mosquitto & 2.x \\
+Protocol & MQTT & 3.1.1 \\
+\midrule
+Containerization & Docker & 24.x \\
+Orchestration & Docker Compose & 2.x \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================
+\section{Component Details}
+% ============================================
+
+\subsection{IoT Layer - Power Meters}
+
+Each floor has an electrical distribution panel equipped with a power meter capable of:
+
+\begin{itemize}
+    \item Measuring 3-phase voltage (R, S, T) and neutral
+    \item Measuring 3-phase current (R, S, T) and neutral
+    \item Calculating active power (kW), apparent power (kVA)
+    \item Tracking cumulative energy consumption (kWh)
+    \item Computing power factor
+    \item Publishing data via MQTT protocol
+\end{itemize}
+
+\subsubsection{Panel Configuration}
+
+\begin{table}[h]
+\centering
+\caption{Default Panel Configuration}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Panel Code} & \textbf{Location} & \textbf{Floor} & \textbf{MQTT Topic} \\
+\midrule
+PANEL\_LANTAI\_1 & Lantai 1 - Main & 1 & DATA/PM/PANEL\_LANTAI\_1 \\
+PANEL\_LANTAI\_2 & Lantai 2 - Office & 2 & DATA/PM/PANEL\_LANTAI\_2 \\
+PANEL\_LANTAI\_3 & Lantai 3 - Meeting & 3 & DATA/PM/PANEL\_LANTAI\_3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Message Broker - MQTT}
+
+\subsubsection{Configuration}
+
+\begin{itemize}
+    \item \textbf{Broker:} Eclipse Mosquitto
+    \item \textbf{Port:} 1883 (non-TLS)
+    \item \textbf{Protocol:} MQTT 3.1.1
+    \item \textbf{QoS Level:} 1 (At least once delivery)
+\end{itemize}
+
+\subsubsection{Topic Structure}
+
+\begin{verbatim}
+DATA/PM/{PANEL_CODE}
+
+Examples:
+  DATA/PM/PANEL_LANTAI_1
+  DATA/PM/PANEL_LANTAI_2
+  DATA/PM/PANEL_LANTAI_3
+  DATA/PM/#  (wildcard subscription)
+\end{verbatim}
+
+\subsubsection{Message Payload Format}
+
+\begin{verbatim}
+{
+  "status": "OK",
+  "data": {
+    "v": [224.7, 224.7, 223.5, 149.8],
+    "i": [0.8, 0.99, 0.58, 0.03],
+    "kw": "0.36",
+    "kVA": "0.46",
+    "kWh": "150.07",
+    "pf": 0.86,
+    "vunbal": 0.01,
+    "iunbal": 0.047,
+    "time": "2026-01-16 11:30:05"
+  }
+}
+\end{verbatim}
+
+\subsection{Application Layer - Next.js Server}
+
+\subsubsection{Components}
+
+\begin{description}
+    \item[MQTT Client] Subscribes to all panel topics, parses messages, writes to databases
+    \item[API Routes] REST endpoints for frontend data access
+    \item[Business Logic] Calculations for usage, cost, panel status
+    \item[React Components] Dashboard UI components (SSR + CSR)
+\end{description}
+
+\subsubsection{Key Features}
+
+\begin{itemize}
+    \item \textbf{Auto-scaling:} Wildcard subscription (\texttt{DATA/PM/\#}) enables automatic detection of new panels
+    \item \textbf{Auto-registration:} New panels are automatically added to PostgreSQL when first detected
+    \item \textbf{In-memory cache:} Latest readings cached for fast API responses
+    \item \textbf{Reconnection:} Automatic MQTT reconnection with exponential backoff
+\end{itemize}
+
+\subsection{Data Layer}
+
+\subsubsection{InfluxDB (Time-Series)}
+
+\begin{itemize}
+    \item \textbf{Purpose:} Store high-frequency sensor readings
+    \item \textbf{Organization:} ravelware
+    \item \textbf{Bucket:} energy
+    \item \textbf{Measurement:} energy\_data
+    \item \textbf{Retention:} 365 days (configurable)
+    \item \textbf{Aggregation:} Hourly, daily, monthly windows
+\end{itemize}
+
+\subsubsection{PostgreSQL (Relational)}
+
+\begin{itemize}
+    \item \textbf{Purpose:} Store panel metadata and aggregated summaries
+    \item \textbf{Database:} energy\_db
+    \item \textbf{ORM:} Prisma
+    \item \textbf{Tables:} panels, energy\_summary\_daily, energy\_summary\_monthly
+\end{itemize}
+
+\subsection{Presentation Layer - Dashboard}
+
+\subsubsection{UI Components}
+
+\begin{description}
+    \item[Panel Status Cards] Real-time status, voltage, current, power readings
+    \item[Today's Usage Widget] Daily consumption and cost per panel
+    \item[Building Total] Aggregate consumption across all panels
+    \item[Energy Chart] Interactive chart with time range filters (1H to 1Y)
+\end{description}
+
+\subsubsection{Features}
+
+\begin{itemize}
+    \item Auto-refresh every 30 seconds
+    \item Dark theme with glassmorphism design
+    \item Responsive layout (mobile-friendly)
+    \item Real-time status indicators (ONLINE/OFFLINE)
+\end{itemize}
+
+% ============================================
+\section{Data Flow}
+% ============================================
+
+\subsection{Real-time Data Ingestion}
+
+\begin{enumerate}
+    \item Power meter measures electrical parameters
+    \item Meter publishes JSON payload to MQTT topic
+    \item MQTT broker receives and forwards to subscribers
+    \item Next.js MQTT client receives message
+    \item Business logic parses and validates payload
+    \item Data written to InfluxDB (time-series)
+    \item Panel status updated in PostgreSQL
+    \item In-memory cache updated for fast access
+\end{enumerate}
+
+\subsection{Dashboard Data Retrieval}
+
+\begin{enumerate}
+    \item Browser requests data from REST API
+    \item API route invokes business logic
+    \item Cache checked for recent data
+    \item InfluxDB queried for time-series data
+    \item PostgreSQL queried for panel metadata
+    \item Data aggregated and formatted
+    \item JSON response returned to browser
+    \item React components render updated UI
+\end{enumerate}
+
+% ============================================
+\section{Deployment}
+% ============================================
+
+\subsection{Docker Compose Services}
+
+\begin{table}[h]
+\centering
+\caption{Docker Services}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Service} & \textbf{Image} & \textbf{Port} & \textbf{Purpose} \\
+\midrule
+mosquitto & eclipse-mosquitto:2 & 1883 & MQTT Broker \\
+influxdb & influxdb:2 & 8086 & Time-Series DB \\
+postgres & postgres:15 & 5432 & Relational DB \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Environment Variables}
+
+\begin{verbatim}
+# MQTT
+MQTT_BROKER_URL=mqtt://localhost:1883
+
+# InfluxDB
+INFLUX_URL=http://localhost:8086
+INFLUX_TOKEN=<token>
+INFLUX_BUCKET=energy
+INFLUX_ORG=ravelware
+
+# PostgreSQL
+DATABASE_URL=postgresql://admin:password@localhost:5432/energy_db
+
+# Business Logic
+COST_PER_KWH=1500
+\end{verbatim}
+
+% ============================================
+\section{Scalability Considerations}
+% ============================================
+
+\begin{itemize}
+    \item \textbf{Horizontal Scaling:} Add more power meters without code changes
+    \item \textbf{Wildcard Subscription:} New panels auto-discovered via MQTT
+    \item \textbf{Database Sharding:} InfluxDB supports time-based retention policies
+    \item \textbf{Load Balancing:} Next.js supports clustered deployment
+    \item \textbf{Caching:} In-memory cache reduces database load
+\end{itemize}
+
+% ============================================
+\section{Security Considerations}
+% ============================================
+
+\begin{itemize}
+    \item MQTT authentication (username/password) can be enabled
+    \item TLS/SSL for MQTT connections (port 8883)
+    \item API rate limiting (future implementation)
+    \item JWT-based authentication (future implementation)
+    \item Database connection pooling with Prisma
+\end{itemize}
+
+% ============================================
+\section{Glossary}
+% ============================================
+
+\begin{description}
+    \item[MQTT] Message Queuing Telemetry Transport -- lightweight pub/sub protocol
+    \item[InfluxDB] Open-source time-series database
+    \item[PostgreSQL] Open-source relational database
+    \item[Next.js] React framework for full-stack web applications
+    \item[Prisma] TypeScript ORM for database access
+    \item[kWh] Kilowatt-hour -- unit of energy
+    \item[kW] Kilowatt -- unit of power
+    \item[Power Factor] Ratio of real to apparent power (0-1)
+    \item[QoS] Quality of Service in MQTT (0, 1, or 2)
+\end{description}
+
+\end{document}

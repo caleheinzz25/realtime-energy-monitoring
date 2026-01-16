@@ -1,0 +1,279 @@
+\documentclass[12pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+
+% Page geometry
+\geometry{margin=2.5cm}
+
+% Colors
+\definecolor{primaryblue}{RGB}{17, 138, 178}
+\definecolor{darkgray}{RGB}{51, 51, 51}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    filecolor=primaryblue,
+    urlcolor=primaryblue,
+}
+
+% Header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textbf{Energy Monitoring System}}
+\fancyhead[R]{Entity Relationship Diagram}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Title formatting
+\titleformat{\section}{\Large\bfseries\color{primaryblue}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{darkgray}}{\thesubsection}{1em}{}
+
+% Document info
+\title{
+    \vspace{-2cm}
+    \textbf{\Huge Entity Relationship Diagram}\\[0.5cm]
+    \Large Energy Monitoring Dashboard System\\[0.3cm]
+    \large Technical Documentation
+}
+\author{Solutions Architect Team\\Ravelware}
+\date{Version 1.0 -- January 16, 2026}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\vspace{1cm}
+
+\begin{abstract}
+This document describes the Entity Relationship Diagram (ERD) for the Energy Monitoring Dashboard System. The system uses a hybrid database architecture combining PostgreSQL for relational metadata and InfluxDB for time-series energy readings. This document provides complete entity definitions, attribute specifications, and relationship cardinalities.
+\end{abstract}
+
+\vspace{1cm}
+
+\tableofcontents
+\newpage
+
+% ============================================
+\section{Document Information}
+% ============================================
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Property} & \textbf{Value} \\
+\midrule
+Document Title & Entity Relationship Diagram \\
+Version & 1.0 \\
+Date & January 16, 2026 \\
+Author & Solutions Architect Team \\
+Project & Energy Monitoring Dashboard \\
+Status & Final \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================
+\section{Database Architecture Overview}
+% ============================================
+
+The Energy Monitoring System employs a \textbf{hybrid database architecture} to optimize for different data access patterns:
+
+\begin{enumerate}
+    \item \textbf{PostgreSQL} -- Stores relational metadata including panel information, daily summaries, and monthly aggregations.
+    \item \textbf{InfluxDB} -- Stores high-frequency time-series data from power meters, optimized for time-based queries and aggregations.
+\end{enumerate}
+
+% taruh diagram di sini
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\textwidth]{plantuml/energy-monitoring-erd.png}
+\caption{Entity Relationship Diagram - Energy Monitoring System}
+\label{fig:erd}
+\end{figure}
+
+% ============================================
+\section{PostgreSQL Entities}
+% ============================================
+
+\subsection{Entity: panels}
+
+The \texttt{panels} table stores metadata and status information for each electrical panel in the building.
+
+\begin{table}[h]
+\centering
+\caption{panels Table Structure}
+\begin{tabular}{@{}lllll@{}}
+\toprule
+\textbf{Column} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Default} & \textbf{Description} \\
+\midrule
+id & INT & PK, AUTO\_INCREMENT & -- & Primary key \\
+panel\_code & VARCHAR(50) & UNIQUE, NOT NULL & -- & Unique panel identifier \\
+location & VARCHAR(100) & NOT NULL & -- & Physical location \\
+floor & INT & NOT NULL & 1 & Floor number \\
+status & VARCHAR(20) & -- & 'OFFLINE' & Current status \\
+last\_online & TIMESTAMP & -- & NULL & Last data timestamp \\
+created\_at & TIMESTAMP & -- & NOW() & Record creation time \\
+updated\_at & TIMESTAMP & -- & AUTO & Last update time \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Example Values}
+\begin{verbatim}
+| id | panel_code      | location           | floor | status  |
+|----|-----------------|--------------------| ------|---------|
+| 1  | PANEL_LANTAI_1  | Lantai 1 - Main    | 1     | ONLINE  |
+| 2  | PANEL_LANTAI_2  | Lantai 2 - Office  | 2     | ONLINE  |
+| 3  | PANEL_LANTAI_3  | Lantai 3 - Meeting | 3     | OFFLINE |
+\end{verbatim}
+
+\subsection{Entity: energy\_summary\_daily}
+
+Stores aggregated daily energy consumption and cost data per panel.
+
+\begin{table}[h]
+\centering
+\caption{energy\_summary\_daily Table Structure}
+\begin{tabular}{@{}lllll@{}}
+\toprule
+\textbf{Column} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Default} & \textbf{Description} \\
+\midrule
+id & INT & PK, AUTO\_INCREMENT & -- & Primary key \\
+panel\_id & INT & FK $\rightarrow$ panels.id & -- & Reference to panel \\
+date & DATE & NOT NULL & -- & Summary date \\
+total\_kwh & DECIMAL(10,2) & NOT NULL & 0 & Daily energy usage \\
+total\_cost & DECIMAL(12,2) & NOT NULL & 0 & Daily cost (IDR) \\
+peak\_kw & DECIMAL(8,2) & -- & NULL & Peak power demand \\
+avg\_power\_factor & DECIMAL(4,2) & -- & NULL & Average power factor \\
+created\_at & TIMESTAMP & -- & NOW() & Record creation time \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Entity: energy\_summary\_monthly}
+
+Stores aggregated monthly energy consumption and cost data per panel.
+
+\begin{table}[h]
+\centering
+\caption{energy\_summary\_monthly Table Structure}
+\begin{tabular}{@{}lllll@{}}
+\toprule
+\textbf{Column} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Default} & \textbf{Description} \\
+\midrule
+id & INT & PK, AUTO\_INCREMENT & -- & Primary key \\
+panel\_id & INT & FK $\rightarrow$ panels.id & -- & Reference to panel \\
+year & INT & NOT NULL & -- & Year (e.g., 2026) \\
+month & INT & NOT NULL & -- & Month (1-12) \\
+total\_kwh & DECIMAL(12,2) & NOT NULL & 0 & Monthly energy usage \\
+total\_cost & DECIMAL(14,2) & NOT NULL & 0 & Monthly cost (IDR) \\
+peak\_kw & DECIMAL(8,2) & -- & NULL & Peak power demand \\
+avg\_power\_factor & DECIMAL(4,2) & -- & NULL & Average power factor \\
+created\_at & TIMESTAMP & -- & NOW() & Record creation time \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================
+\section{InfluxDB Schema}
+% ============================================
+
+\subsection{Measurement: energy\_data}
+
+High-frequency time-series data from power meters.
+
+\begin{table}[h]
+\centering
+\caption{InfluxDB Measurement: energy\_data}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Field/Tag} & \textbf{Type} & \textbf{Category} & \textbf{Description} \\
+\midrule
+\_time & TIMESTAMP & System & Record timestamp (RFC3339) \\
+panelId & STRING & Tag & Panel identifier \\
+\midrule
+voltage\_r & FLOAT & Field & Voltage phase R (V) \\
+voltage\_s & FLOAT & Field & Voltage phase S (V) \\
+voltage\_t & FLOAT & Field & Voltage phase T (V) \\
+voltage\_n & FLOAT & Field & Voltage neutral (V) \\
+current\_r & FLOAT & Field & Current phase R (A) \\
+current\_s & FLOAT & Field & Current phase S (A) \\
+current\_t & FLOAT & Field & Current phase T (A) \\
+current\_n & FLOAT & Field & Current neutral (A) \\
+powerKW & FLOAT & Field & Active power (kW) \\
+powerKVA & FLOAT & Field & Apparent power (kVA) \\
+energyKWh & FLOAT & Field & Cumulative energy (kWh) \\
+powerFactor & FLOAT & Field & Power factor (0-1) \\
+voltageUnbalance & FLOAT & Field & Voltage unbalance ratio \\
+currentUnbalance & FLOAT & Field & Current unbalance ratio \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{InfluxDB Configuration}
+\begin{itemize}
+    \item \textbf{Bucket:} energy
+    \item \textbf{Organization:} ravelware
+    \item \textbf{Retention Policy:} 365 days (configurable)
+    \item \textbf{Write Precision:} Nanoseconds
+\end{itemize}
+
+% ============================================
+\section{Entity Relationships}
+% ============================================
+
+\subsection{Relationship Definitions}
+
+\begin{table}[h]
+\centering
+\caption{Entity Relationships}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Parent Entity} & \textbf{Child Entity} & \textbf{Cardinality} & \textbf{Description} \\
+\midrule
+panels & energy\_summary\_daily & 1:N & One panel has many daily summaries \\
+panels & energy\_summary\_monthly & 1:N & One panel has many monthly summaries \\
+panels & energy\_data (InfluxDB) & 1:N & One panel generates many readings \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Referential Integrity}
+
+\begin{itemize}
+    \item Foreign key \texttt{panel\_id} in \texttt{energy\_summary\_daily} references \texttt{panels.id}
+    \item Foreign key \texttt{panel\_id} in \texttt{energy\_summary\_monthly} references \texttt{panels.id}
+    \item Tag \texttt{panelId} in InfluxDB corresponds to \texttt{panels.panel\_code}
+    \item CASCADE delete is \textbf{not} enabled to preserve historical data
+\end{itemize}
+
+% ============================================
+\section{Glossary}
+% ============================================
+
+\begin{description}
+    \item[kWh] Kilowatt-hour -- Unit of energy consumption
+    \item[kW] Kilowatt -- Unit of power
+    \item[kVA] Kilovolt-ampere -- Unit of apparent power
+    \item[Power Factor] Ratio of real power to apparent power (0-1)
+    \item[Panel] Electrical distribution panel (1 per floor)
+    \item[MQTT] Message Queuing Telemetry Transport protocol
+\end{description}
+
+\end{document}

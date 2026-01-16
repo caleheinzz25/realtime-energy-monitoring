@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Panel {
+  id         Int       @id @default(autoincrement())
+  panelCode  String    @unique @map("panel_code")
+  location   String
+  floor      Int
+  status     String    @default("OFFLINE")
+  lastOnline DateTime? @map("last_online")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  dailySummaries   EnergySummaryDaily[]
+  monthlySummaries EnergySummaryMonthly[]
+
+  @@map("panels")
+}
+
+model EnergySummaryDaily {
+  id        Int      @id @default(autoincrement())
+  panelId   Int      @map("panel_id")
+  panel     Panel    @relation(fields: [panelId], references: [id])
+  date      DateTime @db.Date
+  totalKwh  Float    @map("total_kwh")
+  totalCost Float    @map("total_cost")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([panelId, date])
+  @@map("energy_summary_daily")
+}
+
+model EnergySummaryMonthly {
+  id        Int      @id @default(autoincrement())
+  panelId   Int      @map("panel_id")
+  panel     Panel    @relation(fields: [panelId], references: [id])
+  year      Int
+  month     Int
+  totalKwh  Float    @map("total_kwh")
+  totalCost Float    @map("total_cost")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([panelId, year, month])
+  @@map("energy_summary_monthly")
+}

@@ -1,0 +1,102 @@
+@startuml api-endpoints-diagram
+
+!define RECTANGLE class
+
+skinparam backgroundColor #FEFEFE
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam maxmessagesize 200
+
+skinparam participant {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+}
+
+skinparam database {
+    BackgroundColor #FFF3E0
+    BorderColor #F57C00
+}
+
+title Energy Monitoring API - Sequence Diagram\nREST API Endpoints Flow
+
+actor "Client\n(Browser)" as Client
+participant "Next.js\nAPI Routes" as API
+participant "Business\nLogic" as Logic
+participant "MQTT\nClient" as MQTT
+database "InfluxDB" as Influx
+database "PostgreSQL" as PG
+
+== GET /api/v1/panels/realtime ==
+Client -> API : GET /api/v1/panels/realtime
+activate API
+API -> MQTT : getLatestDataFromCache()
+MQTT --> API : cached data (if available)
+API -> Influx : getLatestEnergyData()
+Influx --> API : latest readings
+API -> PG : prisma.panel.findMany()
+PG --> API : panel metadata
+API -> Logic : getPanelStatus()
+Logic --> API : ONLINE/OFFLINE
+API --> Client : JSON { panels: [...] }
+deactivate API
+
+== GET /api/v1/panels/usage/today/:panelCode ==
+Client -> API : GET /api/v1/panels/usage/today/PANEL_LANTAI_1
+activate API
+API -> MQTT : getLatestDataFromCache()
+MQTT --> API : currentKWh
+API -> Influx : getMidnightKWh()
+Influx --> API : midnightKWh
+API -> Logic : calculateTodayUsage()
+Logic --> API : todayUsageKWh
+API -> Logic : calculateCost()
+Logic --> API : todayCost (IDR)
+API --> Client : JSON { todayUsageKWh, todayCost }
+deactivate API
+
+== GET /api/v1/panels/history/:panelCode?range=24h ==
+Client -> API : GET /api/v1/panels/history/PANEL_LANTAI_1?range=24h
+activate API
+API -> Influx : getHistoricalData(panelId, "24h")
+note right: Aggregation window:\n1h (hourly), 1d (daily),\n30d (monthly)
+Influx --> API : time-series data
+API -> Logic : calculateCost() for each point
+Logic --> API : cost array
+API --> Client : JSON { energy: [...], cost: [...] }
+deactivate API
+
+== GET /api/v1/panels/usage/monthly/:year/:month ==
+Client -> API : GET /api/v1/panels/usage/monthly/2026/01
+activate API
+API -> Influx : getMonthlyData(2026, 1)
+Influx --> API : monthly aggregates
+API -> Logic : calculateCost()
+Logic --> API : total costs
+API --> Client : JSON { panels: [...], buildingTotal }
+deactivate API
+
+== POST /api/mqtt/start ==
+Client -> API : POST /api/mqtt/start
+activate API
+API -> MQTT : initMqttClient()
+MQTT -> MQTT : connect to broker
+MQTT -> MQTT : subscribe to DATA/PM/#
+MQTT --> API : connected = true
+API --> Client : JSON { connected: true }
+deactivate API
+
+== MQTT Data Flow (Background) ==
+participant "Power\nMeter" as Meter
+Meter -> MQTT : publish DATA/PM/PANEL_LANTAI_1
+activate MQTT
+MQTT -> Logic : parseMqttPayload()
+Logic --> MQTT : parsed data
+MQTT -> Influx : writeEnergyData()
+Influx --> MQTT : success
+MQTT -> PG : prisma.panel.update()
+note right: Update status to ONLINE\nand lastOnline timestamp
+PG --> MQTT : updated
+MQTT -> MQTT : updateCache()
+deactivate MQTT
+
+@enduml

@@ -1,0 +1,93 @@
+@startuml energy-monitoring-erd
+
+!define TABLE_BORDER_COLOR #073B4C
+!define TABLE_HEADER_COLOR #118AB2
+!define PRIMARY_KEY_COLOR #FFD166
+!define FOREIGN_KEY_COLOR #EF476F
+
+skinparam class {
+    BackgroundColor #FFFFFF
+    BorderColor TABLE_BORDER_COLOR
+    HeaderBackgroundColor TABLE_HEADER_COLOR
+    FontColor #333333
+    FontSize 12
+}
+
+skinparam linetype ortho
+
+entity "panels" as panels {
+    * **id** : INT <<PK>>
+    --
+    * panel_code : VARCHAR(50) <<UNIQUE>>
+    * location : VARCHAR(100)
+    * floor : INT
+    status : VARCHAR(20)
+    last_online : TIMESTAMP
+    created_at : TIMESTAMP
+    updated_at : TIMESTAMP
+}
+
+entity "energy_summary_daily" as daily {
+    * **id** : INT <<PK>>
+    --
+    * panel_id : INT <<FK>>
+    * date : DATE
+    * total_kwh : DECIMAL(10,2)
+    * total_cost : DECIMAL(12,2)
+    peak_kw : DECIMAL(8,2)
+    avg_power_factor : DECIMAL(4,2)
+    created_at : TIMESTAMP
+}
+
+entity "energy_summary_monthly" as monthly {
+    * **id** : INT <<PK>>
+    --
+    * panel_id : INT <<FK>>
+    * year : INT
+    * month : INT
+    * total_kwh : DECIMAL(12,2)
+    * total_cost : DECIMAL(14,2)
+    peak_kw : DECIMAL(8,2)
+    avg_power_factor : DECIMAL(4,2)
+    created_at : TIMESTAMP
+}
+
+entity "energy_data (InfluxDB)" as influx {
+    * **_time** : TIMESTAMP <<PK>>
+    * **panelId** : STRING <<TAG>>
+    --
+    voltage_r : FLOAT
+    voltage_s : FLOAT
+    voltage_t : FLOAT
+    voltage_n : FLOAT
+    current_r : FLOAT
+    current_s : FLOAT
+    current_t : FLOAT
+    current_n : FLOAT
+    powerKW : FLOAT
+    powerKVA : FLOAT
+    energyKWh : FLOAT
+    powerFactor : FLOAT
+    voltageUnbalance : FLOAT
+    currentUnbalance : FLOAT
+}
+
+panels ||--o{ daily : "has many"
+panels ||--o{ monthly : "has many"
+panels ||--o{ influx : "generates"
+
+note right of panels
+    Main entity storing panel
+    metadata and status.
+    Auto-registered when new
+    MQTT topic is detected.
+end note
+
+note bottom of influx
+    Time-series data stored in InfluxDB.
+    Aggregated hourly/daily for charts.
+    Bucket: energy
+    Org: ravelware
+end note
+
+@enduml
